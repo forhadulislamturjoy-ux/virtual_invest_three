@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virtual Invest</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f2f6fa; margin: 0; padding: 16px; color: #222; }
+  .box { max-width: 720px; margin: 0 auto; }
+  h1 { text-align: center; color: #0b5; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .balance { font-size: 24px; font-weight: bold; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; }
+  button { background: #0b5; color: #fff; border: 0; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  button.sell { background: #d33; }
+  .note { font-size: 13px; color: #666; text-align: center; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Virtual Invest</h1>
+  <p class="note">এটা শুধু শেখার জন্য। এখানে সব টাকা ভার্চুয়াল, আসল টাকা নয়।</p>
+
+  <div class="card">
+    <div>আপনার ক্যাশ</div>
+    <div class="balance">৳ <span id="cash">0</span></div>
+    <div>মোট সম্পদ: ৳ <span id="total">0</span></div>
+  </div>
+
+  <div class="card">
+    <h3>বাজার</h3>
+    <table>
+      <thead><tr><th>কোম্পানি</th><th>দাম (৳)</th><th></th></tr></thead>
+      <tbody id="market"></tbody>
+    </table>
+    <button onclick="tick()" style="margin-top:10px">নতুন দিনের দাম দেখুন</button>
+  </div>
+
+  <div class="card">
+    <h3>আপনার পোর্টফোলিও</h3>
+    <table>
+      <thead><tr><th>কোম্পানি</th><th>সংখ্যা</th><th>মূল্য (৳)</th><th></th></tr></thead>
+      <tbody id="portfolio"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <button class="sell" onclick="resetGame()">নতুন করে শুরু করুন</button>
+  </div>
+</div>
+
+<script>
+  const START_CASH = 10000;
+  const defaultStocks = [
+    { name: "Tesla", price: 250 },
+    { name: "NVIDIA", price: 480 },
+    { name: "Apple", price: 190 },
+    { name: "Bitcoin", price: 900 }
+  ];
+
+  let state = JSON.parse(localStorage.getItem("vi_state")) || {
+    cash: START_CASH,
+    stocks: defaultStocks,
+    holdings: {}
+  };
+
+  function save() { localStorage.setItem("vi_state", JSON.stringify(state)); }
+
+  function buy(i) {
+    const s = state.stocks[i];
+    if (state.cash >= s.price) {
+      state.cash -= s.price;
+      state.holdings[s.name] = (state.holdings[s.name] || 0) + 1;
+      save(); render();
+    } else { alert("ক্যাশ যথেষ্ট নেই"); }
+  }
+
+  function sell(i) {
+    const s = state.stocks[i];
+    if ((state.holdings[s.name] || 0) > 0) {
+      state.holdings[s.name] -= 1;
+      state.cash += s.price;
+      save(); render();
+    }
+  }
+
+  function tick() {
+    state.stocks.forEach(s => {
+      const change = (Math.random() - 0.5) * 0.2;
+      s.price = Math.max(1, Math.round(s.price * (1 + change)));
+    });
+    save(); render();
+  }
+
+  function resetGame() {
+    if (confirm("সব মুছে নতুন করে শুরু করবেন?")) {
+      localStorage.removeItem("vi_state");
+      state = { cash: START_CASH, stocks: JSON.parse(JSON.stringify(defaultStocks)), holdings: {} };
+      render();
+    }
+  }
+
+  function render() {
+    let total = state.cash;
+    document.getElementById("market").innerHTML = state.stocks.map((s, i) =>
+      `<tr><td>${s.name}</td><td>${s.price}</td><td><button onclick="buy(${i})">কিনুন</button></td></tr>`
+    ).join("");
+    document.getElementById("portfolio").innerHTML = state.stocks.map((s, i) => {
+      const qty = state.holdings[s.name] || 0;
+      total += qty * s.price;
+      return qty > 0 ? `<tr><td>${s.name}</td><td>${qty}</td><td>${qty * s.price}</td><td><button class="sell" onclick="sell(${i})">বেচুন</button></td></tr>` : "";
+    }).join("");
+    document.getElementById("cash").textContent = state.cash;
+    document.getElementById("total").textContent = total;
+  }
+
+  render();
+</script>
+</body>
+</html>
